@@ -48,8 +48,8 @@ const App: React.FC = () => {
       };
 
       setMessages(prev => [...prev, aiMessage]);
-    } catch (err) {
-      setError('Communication error. Please check your n8n webhook status.');
+    } catch (err: any) {
+      setError(err.message || 'Communication error. Please check your n8n webhook status.');
     } finally {
       setIsLoading(false);
     }
@@ -117,7 +117,7 @@ const App: React.FC = () => {
                   <line x1="12" y1="8" x2="12" y2="12"></line>
                   <line x1="12" y1="16" x2="12.01" y2="16"></line>
                 </svg>
-                <span>{error}</span>
+                <span className="break-words">{error}</span>
               </div>
             )}
           </div>
