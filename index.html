@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tax Q&A Agent</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -29,13 +29,30 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #404040;
         }
+        /* Override prose-invert default colors for specific elements */
+        .prose-invert pre {
+            background-color: #171717 !important;
+            border: 1px solid #262626;
+        }
+        .prose-invert code {
+            color: #fb923c !important; /* orange-400 */
+        }
+        .prose-invert strong {
+            color: #f5f5f5 !important;
+        }
+        .prose a {
+            color: #fb923c !important;
+            text-decoration: underline;
+        }
     </style>
 <script type="importmap">
 {
   "imports": {
     "react/": "https://esm.sh/react@^19.2.3/",
     "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react-markdown": "https://esm.sh/react-markdown@^9.0.1",
+    "remark-gfm": "https://esm.sh/remark-gfm@^4.0.0"
   }
 }
 </script>

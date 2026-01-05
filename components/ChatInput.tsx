@@ -32,7 +32,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
   }, [isLoading]);
 
   return (
-    <div className="p-4 bg-neutral-950 border-t border-neutral-900/50">
+    <div className="p-4 bg-gradient-to-t from-orange-500/5 via-neutral-950 to-neutral-950 border-t border-neutral-900/50">
       <form onSubmit={handleSubmit} className="max-w-4xl mx-auto relative group">
         <input
           ref={inputRef}
@@ -60,7 +60,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
         </button>
       </form>
       <p className="text-[10px] text-center text-neutral-600 mt-3 font-medium tracking-wide uppercase">
-        Connected to n8n Webhook
+        © Bolaji Ilori 2026
       </p>
     </div>
   );

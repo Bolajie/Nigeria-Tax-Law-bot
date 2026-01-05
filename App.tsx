@@ -57,8 +57,8 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen max-h-screen bg-neutral-950 text-neutral-100 overflow-hidden selection:bg-orange-500/30">
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 bg-neutral-900/40 backdrop-blur-xl border-b border-neutral-900 z-10">
+      {/* Header with subtle orange gradient */}
+      <header className="flex items-center justify-between px-6 py-4 bg-gradient-to-b from-orange-500/5 via-neutral-900/40 to-neutral-900/40 backdrop-blur-xl border-b border-neutral-900/50 z-10">
         <div className="flex items-center space-x-3">
           <div className="h-10 w-10 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

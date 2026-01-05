@@ -1,5 +1,7 @@
 
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Message } from '../types';
 
 interface ChatMessageProps {
@@ -25,8 +27,16 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
             ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-white rounded-tr-none' 
             : 'bg-neutral-900 text-neutral-200 border border-neutral-800 rounded-tl-none'
         }`}>
-          {message.text}
-          <div className={`text-[10px] mt-1 opacity-60 ${isUser ? 'text-right' : 'text-left'}`}>
+          <div className={`prose prose-sm md:prose-base max-w-none ${
+            isUser 
+              ? 'prose-invert prose-p:text-white prose-headings:text-white prose-strong:text-white prose-li:text-white' 
+              : 'prose-invert prose-p:text-neutral-200 prose-headings:text-white prose-strong:text-orange-400 prose-li:text-neutral-200'
+          }`}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {message.text}
+            </ReactMarkdown>
+          </div>
+          <div className={`text-[10px] mt-2 opacity-60 ${isUser ? 'text-right text-orange-100' : 'text-left text-neutral-500'}`}>
             {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </div>
         </div>
