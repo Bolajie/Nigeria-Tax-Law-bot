@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 
 interface ChatInputProps {
@@ -60,7 +59,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
         </button>
       </form>
       <p className="text-[10px] text-center text-neutral-600 mt-3 font-medium tracking-wide uppercase">
-        © Bolaji Ilori 2026
+        (c) Bolaji Ilori 2026
       </p>
     </div>
   );

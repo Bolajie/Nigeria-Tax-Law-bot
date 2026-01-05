@@ -1,4 +1,3 @@
-
 export type Sender = 'user' | 'ai';
 
 export interface Message {
@@ -14,4 +13,5 @@ export interface WebhookResponse {
 
 export interface WebhookRequest {
   message: string;
+  chatInput?: string;
 }
