@@ -1,0 +1,5 @@
+{
+  "name": "Tax Q&A Agent",
+  "description": "A high-performance, modern AI chat interface designed to integrate seamlessly with n8n webhooks, featuring real-time messaging, responsive design, and smooth animations.",
+  "requestFramePermissions": []
+}
