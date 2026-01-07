@@ -4,7 +4,6 @@ const WEBHOOK_URL = 'https://n8n.ibolajie.work.gd/webhook/c79b3b46-f549-4372-934
 
 /**
  * Technical noise patterns that indicate agent "inner monologue", tool logs, or artifacts.
- * Patterns are refined to avoid stripping valid Markdown syntax.
  */
 const NOISE_PATTERNS = [
   /Calling\s+[\w\s_-]+\s+with\s+input:.*?(\{.*?\})?/gi,
@@ -16,14 +15,10 @@ const NOISE_PATTERNS = [
   /Action:.*?(?=\n|$)/gi,
   /Action Input:.*?(?=\n|$)/gi,
   /Observation:.*?(?=\n|$)/gi,
-  // Targeted bracket stripping: Only remove if it contains technical keywords or is empty/small noise
   /\[(Vector store|nodeName|metadata|Step|Thought|Action|Observation|Calling|Search).*?\]/gi,
-  /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi // UUIDs
+  /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi
 ];
 
-/**
- * Extracts JSON objects from the n8n stream string.
- */
 function parseJsonStream(text: string): any[] {
   const results: any[] = [];
   let currentIndex = 0;
@@ -62,27 +57,17 @@ function parseJsonStream(text: string): any[] {
   return results;
 }
 
-/**
- * Cleans a string from technical artifacts while preserving Markdown formatting.
- */
 function cleanContent(text: string): string {
   let cleaned = text.trim();
-  
-  // Apply regex cleaning
   NOISE_PATTERNS.forEach(pattern => {
     cleaned = cleaned.replace(pattern, '');
   });
-
-  // Specifically target isolated artifacts often found at the start/end of n8n streams
   return cleaned
-    .replace(/^['\s\.\]\|]+/, '') // Clean start
-    .replace(/['\s\.\[\]\|]+$/, '') // Clean end
+    .replace(/^['\s\.\]\|]+/, '')
+    .replace(/['\s\.\[\]\|]+$/, '')
     .trim();
 }
 
-/**
- * Extracts content from n8n parts with priority for the final response node.
- */
 function extractFromPart(part: any): { content: string, isFinal: boolean } | null {
   if (typeof part !== 'object' || part === null) return null;
 
@@ -101,41 +86,29 @@ function extractFromPart(part: any): { content: string, isFinal: boolean } | nul
   return null;
 }
 
-/**
- * Smart de-duplication and filtering to handle streaming artifacts and echoes.
- */
 function finalizeText(extracted: { content: string, isFinal: boolean }[]): string {
-  // Step 1: Clean all blocks
   const cleaned = extracted
     .map(p => ({ content: cleanContent(p.content), isFinal: p.isFinal }))
     .filter(p => p.content.length > 0);
 
-  // Step 2: Preference for final response nodes
   const finalNodes = cleaned.filter(p => p.isFinal);
   const source = finalNodes.length > 0 ? finalNodes : cleaned;
 
-  // Step 3: Prefix/Suffix Suppression (Stream de-duplication)
   const contents = source.map(p => p.content);
   const sorted = [...new Set(contents)].sort((a, b) => b.length - a.length);
   
   const unique: string[] = [];
   for (const str of sorted) {
-    // Check if this string is already effectively contained in an accepted one
     if (!unique.some(u => u.includes(str))) {
-      // Filter out technical fragments that are too short to be meaningful 
-      // when we already have long, structured content.
       if (str.length < 15 && sorted.some(s => s.length > 40)) {
-        // Only keep if it doesn't look like an artifact
         if (/^[a-z\s]+$/i.test(str)) continue;
       }
       unique.push(str);
     }
   }
 
-  // Step 4: Final Join and cleanup of node names
   let result = unique.reverse().join('\n\n').trim();
 
-  // Final sweep for common leakages
   const technicalTerms = ['Respond to Webhook', 'AI Agent', 'Vector store', 'nodeName', 'metadata'];
   technicalTerms.forEach(term => {
     const regex = new RegExp(`\\b${term}\\b`, 'gi');
@@ -145,7 +118,7 @@ function finalizeText(extracted: { content: string, isFinal: boolean }[]): strin
   return result.trim();
 }
 
-export const sendMessageToWebhook = async (message: string): Promise<string> => {
+export const sendMessageToWebhook = async (message: string, sessionId: string): Promise<string> => {
   try {
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
@@ -153,7 +126,11 @@ export const sendMessageToWebhook = async (message: string): Promise<string> => 
         'Content-Type': 'application/json',
         'Accept': 'application/json, text/plain, */*',
       },
-      body: JSON.stringify({ message, chatInput: message }),
+      body: JSON.stringify({ 
+        message, 
+        chatInput: message,
+        sessionId: sessionId 
+      }),
     });
 
     if (!response.ok) {

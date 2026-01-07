@@ -14,4 +14,5 @@ export interface WebhookResponse {
 export interface WebhookRequest {
   message: string;
   chatInput?: string;
+  sessionId?: string;
 }
