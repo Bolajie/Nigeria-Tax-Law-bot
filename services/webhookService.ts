@@ -1,10 +1,7 @@
-import { WebhookRequest } from '../types';
+import { WebhookRequest } from '../types.ts';
 
 const WEBHOOK_URL = 'https://n8n.ibolajie.work.gd/webhook/c79b3b46-f549-4372-934f-3f01c8f92aab/chat';
 
-/**
- * Technical noise patterns that indicate agent "inner monologue", tool logs, or artifacts.
- */
 const NOISE_PATTERNS = [
   /Calling\s+[\w\s_-]+\s+with\s+input:.*?(\{.*?\})?/gi,
   /Thought:.*?(?=\n|$)/gi,
@@ -26,9 +23,15 @@ function parseJsonStream(text: string): any[] {
   while (currentIndex < text.length) {
     const startBrace = text.indexOf('{', currentIndex);
     const startBracket = text.indexOf('[', currentIndex);
-    let startPos = (startBrace !== -1 && startBracket !== -1) 
-      ? Math.min(startBrace, startBracket) 
-      : (startBrace !== -1 ? startBrace : startBracket);
+    
+    let startPos = -1;
+    if (startBrace !== -1 && startBracket !== -1) {
+      startPos = Math.min(startBrace, startBracket);
+    } else if (startBrace !== -1) {
+      startPos = startBrace;
+    } else if (startBracket !== -1) {
+      startPos = startBracket;
+    }
 
     if (startPos === -1) break;
 
@@ -50,14 +53,19 @@ function parseJsonStream(text: string): any[] {
 
     if (endPos !== -1) {
       const snippet = text.substring(startPos, endPos + 1);
-      try { results.push(JSON.parse(snippet)); } catch (e) {}
+      try { 
+        results.push(JSON.parse(snippet)); 
+      } catch (e) {}
       currentIndex = endPos + 1;
-    } else break;
+    } else {
+      break;
+    }
   }
   return results;
 }
 
 function cleanContent(text: string): string {
+  if (!text) return '';
   let cleaned = text.trim();
   NOISE_PATTERNS.forEach(pattern => {
     cleaned = cleaned.replace(pattern, '');
@@ -108,7 +116,6 @@ function finalizeText(extracted: { content: string, isFinal: boolean }[]): strin
   }
 
   let result = unique.reverse().join('\n\n').trim();
-
   const technicalTerms = ['Respond to Webhook', 'AI Agent', 'Vector store', 'nodeName', 'metadata'];
   technicalTerms.forEach(term => {
     const regex = new RegExp(`\\b${term}\\b`, 'gi');
@@ -118,42 +125,99 @@ function finalizeText(extracted: { content: string, isFinal: boolean }[]): strin
   return result.trim();
 }
 
-export const sendMessageToWebhook = async (message: string, sessionId: string): Promise<string> => {
-  try {
-    const response = await fetch(WEBHOOK_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json, text/plain, */*',
-      },
-      body: JSON.stringify({ 
-        message, 
-        chatInput: message,
-        sessionId: sessionId 
-      }),
-    });
+function processRawResponse(rawBody: string): string {
+  const jsonParts = parseJsonStream(rawBody);
+  if (jsonParts.length === 0) {
+    return cleanContent(rawBody);
+  }
+  const extracted = jsonParts
+    .map(extractFromPart)
+    .filter((p): p is { content: string, isFinal: boolean } => p !== null);
+  return finalizeText(extracted);
+}
+
+export const sendMessageToWebhook = async (
+  message: string, 
+  sessionId: string,
+  onUpdate: (text: string) => void
+): Promise<string> => {
+    const payload: WebhookRequest = { 
+      message, 
+      chatInput: message,
+      sessionId: sessionId 
+    };
+
+    let response: Response;
+
+    try {
+      response = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json, text/plain, */*',
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch (networkError) {
+      console.error('Network request failed:', networkError);
+      throw new Error('Unable to connect to the server. Please check your internet connection.');
+    }
 
     if (!response.ok) {
-      throw new Error(`Server error: ${response.status}`);
+      console.error(`HTTP Error: ${response.status} ${response.statusText}`);
+      let errorMessage = `Server error (${response.status}).`;
+      
+      if (response.status === 503 || response.status === 502) {
+        errorMessage = 'The service is temporarily unavailable. Please try again later.';
+      } else if (response.status === 429) {
+        errorMessage = 'Too many requests. Please wait a moment before sending another message.';
+      } else if (response.status >= 500) {
+        errorMessage = 'Internal server error. The AI agent is having trouble processing your request.';
+      }
+      
+      throw new Error(errorMessage);
     }
 
-    const rawBody = await response.text();
-    const jsonParts = parseJsonStream(rawBody);
-    
-    if (jsonParts.length === 0) {
-      return cleanContent(rawBody) || 'No clear response received.';
+    const reader = response.body?.getReader();
+    if (!reader) {
+      try {
+        const rawBody = await response.text();
+        const finalResult = processRawResponse(rawBody);
+        onUpdate(finalResult);
+        return finalResult;
+      } catch (readError) {
+         console.error('Failed to read text response:', readError);
+         throw new Error('Received an invalid response from the server.');
+      }
     }
 
-    const extracted = jsonParts
-      .map(extractFromPart)
-      .filter((p): p is { content: string, isFinal: boolean } => p !== null);
+    const decoder = new TextDecoder();
+    let rawAccumulator = '';
+    let lastEmittedText = '';
 
-    const result = finalizeText(extracted);
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        rawAccumulator += chunk;
+
+        const currentText = processRawResponse(rawAccumulator);
+        if (currentText !== lastEmittedText && currentText.length > 0) {
+          lastEmittedText = currentText;
+          onUpdate(currentText);
+        }
+      }
+    } catch (streamError) {
+      console.error('Stream reading error:', streamError);
+      throw new Error('Connection lost while receiving the response. Please try again.');
+    }
+
+    const finalResult = processRawResponse(rawAccumulator);
+    if (finalResult !== lastEmittedText) {
+      onUpdate(finalResult);
+    }
     
-    return result || "I'm sorry, I couldn't find a clear answer. Please check the FIRS website at https://www.firs.gov.ng for official details.";
-
-  } catch (error: any) {
-    console.error('Webhook Error:', error);
-    throw new Error('Communication failed. Please check your connection and try again.');
-  }
+    return finalResult || "I'm sorry, I couldn't find a clear answer. Please check the FIRS website at https://www.firs.gov.ng for official details.";
 };
