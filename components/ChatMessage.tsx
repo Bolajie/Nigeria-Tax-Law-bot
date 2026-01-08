@@ -6,40 +6,34 @@ import { Message } from '../types.ts';
 interface ChatMessageProps {
   message: Message;
   isLatest?: boolean;
+  isLoading?: boolean;
   index: number;
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ message, isLatest, index }) => {
-  const isUser = message.sender === 'user';
-  const [displayText, setDisplayText] = useState(isUser || !isLatest ? message.text : '');
-  const [isMounted, setIsMounted] = useState(false);
+const TypingIndicator: React.FC<{ text: string }> = ({ text }) => (
+  <div className="flex items-center space-x-2 py-1 text-neutral-400 italic text-sm font-medium">
+    <span className="flex items-end space-x-1.5 h-4">
+      <span className="w-1.5 h-1.5 bg-orange-500 rounded-full" style={{ animation: 'bouncing-dots 1.2s infinite ease-in-out' }}></span>
+      <span className="w-1.5 h-1.5 bg-orange-500 rounded-full" style={{ animation: 'bouncing-dots 1.2s infinite ease-in-out 0.2s' }}></span>
+      <span className="w-1.5 h-1.5 bg-orange-500 rounded-full" style={{ animation: 'bouncing-dots 1.2s infinite ease-in-out 0.4s' }}></span>
+    </span>
+    {text && <span className="animate-pulse ml-0.5">{text}</span>}
+  </div>
+);
 
-  useEffect(() => {
-    if (!isUser && isLatest && displayText.length < message.text.length) {
-      const timeout = setTimeout(() => {
-        const remaining = message.text.length - displayText.length;
-        let increment = 6;
-        if (remaining > 500) increment = 50;
-        else if (remaining > 200) increment = 25;
-        else if (remaining > 50) increment = 12;
-        
-        setDisplayText(message.text.slice(0, displayText.length + increment));
-      }, 10);
-      return () => clearTimeout(timeout);
-    } else if (!isUser && !isLatest && displayText !== message.text) {
-        setDisplayText(message.text);
-    } else if (isUser && displayText !== message.text) {
-        setDisplayText(message.text);
-    }
-  }, [message.text, displayText, isUser, isLatest]);
+const ChatMessage: React.FC<ChatMessageProps> = ({ message, isLatest, isLoading, index }) => {
+  const isUser = message.sender === 'user';
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsMounted(true), 50);
     return () => clearTimeout(timer);
   }, []);
-
+  
+  const REASONING_MESSAGE = 'Jumoke is reasoning...';
+  const isTyping = !isUser && isLatest && isLoading;
+  const isReasoning = message.text === REASONING_MESSAGE && isTyping;
   const animationDelay = index < 3 ? `${index * 100}ms` : '0ms';
-  const isTyping = !isUser && isLatest && (displayText.length < message.text.length || message.text.length === 0);
 
   return (
     <div 
@@ -69,7 +63,10 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isLatest, index }) =
               ? 'prose-invert prose-p:text-white prose-headings:text-white prose-strong:text-white prose-li:text-white' 
               : 'prose-invert prose-p:text-neutral-200 prose-headings:text-neutral-100 prose-strong:text-orange-400 prose-li:text-neutral-200'
           }`}>
-            {displayText ? (
+            
+            {isReasoning ? (
+              <TypingIndicator text={REASONING_MESSAGE} />
+            ) : message.text ? (
               <ReactMarkdown 
                 remarkPlugins={[remarkGfm]}
                 components={{
@@ -113,20 +110,13 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isLatest, index }) =
                   )
                 }}
               >
-                {displayText}
+                {message.text}
               </ReactMarkdown>
             ) : isTyping ? (
-              <div className="flex items-center space-x-2 py-1 text-neutral-500 italic text-sm font-medium">
-                <span className="flex space-x-1">
-                  <span className="w-1 h-1 bg-orange-500/60 rounded-full animate-bounce"></span>
-                  <span className="w-1 h-1 bg-orange-500/60 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-                  <span className="w-1 h-1 bg-orange-500/60 rounded-full animate-bounce [animation-delay:0.4s]"></span>
-                </span>
-                <span className="animate-pulse">AI is typing...</span>
-              </div>
+              <TypingIndicator text="AI is typing..." />
             ) : null}
 
-            {displayText && isTyping && (
+            {!isReasoning && message.text && isTyping && (
               <span className="inline-block w-1 h-4 ml-1 bg-orange-500/80 animate-pulse align-middle" aria-hidden="true" />
             )}
           </div>

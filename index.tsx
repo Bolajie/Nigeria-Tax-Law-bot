@@ -16,7 +16,10 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
+// FIX: Using named 'Component' and class properties for 'state' ensures better 
+// TypeScript inference and avoids "Property does not exist" errors in class components.
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  // Directly initialize state as a class property for cleaner syntax and better typing
   state: ErrorBoundaryState = { hasError: false, error: null };
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {

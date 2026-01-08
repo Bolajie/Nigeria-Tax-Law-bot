@@ -60,6 +60,17 @@
         .animate-zoom-in {
             animation: zoomIn 0.3s ease-out forwards;
         }
+        
+        @keyframes bouncing-dots {
+            0%, 100% {
+                transform: translateY(0);
+                opacity: 0.5;
+            }
+            50% {
+                transform: translateY(-4px);
+                opacity: 1;
+            }
+        }
     </style>
 <script type="importmap">
 {
@@ -69,8 +80,8 @@
     "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?deps=react@18.2.0",
     "react-markdown": "https://esm.sh/react-markdown@9.0.1?bundle&deps=react@18.2.0",
     "remark-gfm": "https://esm.sh/remark-gfm@4.0.0?bundle",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/"
+    "react/": "https://esm.sh/react@18.2.0/",
+    "react-dom/": "https://esm.sh/react-dom@18.2.0/"
   }
 }
 </script>

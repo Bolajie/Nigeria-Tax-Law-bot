@@ -46,45 +46,37 @@ const App: React.FC = () => {
       timestamp: new Date(),
     };
 
-    const aiPlaceholderId = (Date.now() + 1).toString();
     const aiPlaceholderMessage: Message = {
-      id: aiPlaceholderId,
-      text: '',
+      id: (Date.now() + 1).toString(),
+      text: 'Jumoke is reasoning...',
       sender: 'ai',
       timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages(prev => [...prev, userMessage, aiPlaceholderMessage]);
     setShouldAutoScroll(true);
     setIsLoading(true);
     setError(null);
 
-    // Removed the setTimeout logic here. We rely on onUpdate to add the message 
-    // when the first chunk of data arrives. This prevents race conditions where 
-    // a failed request's error handling removes the message, but the timeout adds it back.
-
     try {
       await sendMessageToWebhook(text, sessionId, (streamedText) => {
+        // IMPORTANT: Only update if streamedText is not empty.
+        // This keeps the 'Reasoning' placeholder visible while intermediate noisy chunks are being filtered out.
+        if (!streamedText) return;
+
         setMessages(prev => {
-            const index = prev.findIndex(m => m.id === aiPlaceholderId);
-            if (index === -1) {
-                // First chunk received: Add the AI message now.
-                return [...prev, { ...aiPlaceholderMessage, text: streamedText }];
-            }
-            
-            const newMessages = [...prev];
-            newMessages[index] = {
-                ...newMessages[index],
-                text: streamedText
-            };
-            return newMessages;
+          const newMessages = [...prev];
+          const index = newMessages.findIndex(m => m.id === aiPlaceholderMessage.id);
+          if (index !== -1) {
+            newMessages[index] = { ...newMessages[index], text: streamedText };
+          }
+          return newMessages;
         });
       });
     } catch (err: any) {
       console.error("Chat Error:", err);
-      setError(err.message || 'An unexpected error occurred. Please check your connection or try again later.');
-      // Remove placeholder if it was added (partially) or never added
-      setMessages(prev => prev.filter(m => m.id !== aiPlaceholderId));
+      setError(err.message || 'An unexpected error occurred. Please try again.');
+      setMessages(prev => prev.filter(m => m.id !== aiPlaceholderMessage.id || m.text.length > 0));
     } finally {
       setIsLoading(false);
     }
@@ -128,24 +120,10 @@ const App: React.FC = () => {
               key={msg.id} 
               message={msg} 
               isLatest={index === messages.length - 1}
+              isLoading={isLoading}
               index={index}
             />
           ))}
-          {isLoading && messages[messages.length - 1]?.sender !== 'ai' && (
-            <div className="flex justify-start mb-6 animate-fade-in-up w-full">
-              <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-neutral-800 mr-2 md:mr-3 border border-neutral-700 flex items-center justify-center text-[10px] md:text-xs font-bold text-neutral-400 shrink-0">
-                AI
-              </div>
-              <div className="bg-neutral-900 border border-neutral-800 px-4 py-3 rounded-2xl rounded-tl-none flex items-center space-x-3 shadow-sm max-w-[85%]">
-                <div className="flex space-x-1.5">
-                  <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-bounce [animation-duration:0.8s]"></div>
-                  <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.15s]"></div>
-                  <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.3s]"></div>
-                </div>
-                <span className="text-xs md:text-sm text-neutral-400 font-medium italic tracking-tight">Jumoke is reasoning...</span>
-              </div>
-            </div>
-          )}
           {error && (
             <div className="mb-6 p-3 md:p-4 bg-red-950/30 border border-red-500/20 text-red-400 text-xs md:text-sm rounded-xl text-center animate-zoom-in mx-4">
               {error}
