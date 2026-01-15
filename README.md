@@ -1,3 +1,5 @@
+![Nigeria Tax Law Bot Screenshot](https://raw.githubusercontent.com/Bolajie/Nigeria-Tax-Law-bot/main/components/Screenshot%202026-01-13%20115954.png)
+
 # Nigerian Tax Act 2025 AI Agent System
 ## Case Study & Technical Documentation
 
@@ -285,7 +287,7 @@ User Query
 ---
 
 ## Workflow 2: Document Ingestion Pipeline
-
+![Nigeria Tax Law Bot Screenshot](https://raw.githubusercontent.com/Bolajie/Nigeria-Tax-Law-bot/main/components/Screenshot%202026-01-09%20102513.png)
 ### Overview
 Automated ETL pipeline that processes PDF documents from Google Drive into structured, searchable knowledge stored in both vector and graph databases.
 
